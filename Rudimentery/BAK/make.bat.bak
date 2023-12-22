@@ -1,0 +1,5 @@
+ECHO ON
+CD ../cc65/bin
+START ca65.exe rudimentery_label_loop_256.asm -o rudimentery_label_loop_256.o
+START ld65.exe rudimentery_label_loop_256.o -C vmc_fe.cfg -o out256.bin
+PAUSE

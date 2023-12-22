@@ -1,0 +1,30 @@
+Propigation delay by adress (at 4.5v
+2.5mhz is 400ns
+not counting outside of io glue
+
+ram
+0000-3fff
+typ 9+9 ns  (18ns)
+max	18+18 ns (36ns)
+
+ext 8000-ffff (if no rom)
+typ  10+9+9+9+9 (46ns)
+max  20+18+18+18+18 (92ns)
+
+
+IO
+6000-6fff
+typ 9+10 (19ns)
+max 18+20 (38ns)
+
+romsel
+8000-ffff
+typ 10+10+9+9 (38ns)
+max 20+20+18+18 (76ns)
+
+
+
+vid window
+4000-5fff
+typ 9+9+9	(27ns)
+max 18+18+18 (54ns)

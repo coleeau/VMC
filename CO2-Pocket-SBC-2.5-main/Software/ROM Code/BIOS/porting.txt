@@ -1,0 +1,77 @@
+Porting to do
+
+bios:
+
+port cnt calls to 82c54
+port chr* serial calls to 16c550
+port dly calls to 82c54
+rewrite io init to include 16c550, 82c54, 65c21, (clock ic, video)
+edit panic routine for 16c550
+	rewrite interupts
+		16c550
+		82c54
+		65c21
+
+
+
+
+
+
+
+
+
+
+port sc28l92
+port monwarm/cold/etc.
+
+mon:
+disable ide "BOOT MICRODRIVE" ctrl b 
+				routine removed
+				call removed
+				
+				
+				msg 4a,4b removed
+				
+				
+				
+				
+				
+adjust eeprom write
+		remove unlock sequence
+		implement eep post write ready
+		implement page write
+disable time
+			routine removed
+				call removed
+				UCOK?
+				
+				removed msgs,
+				
+				
+				
+replace xmodem with custom routine???
+
+Zero Command: adjust for memory map
+			change window to be smaller
+			implement clearing of bank switched ram
+			maybe vid window too?
+
+
+
+
+found bios routines
+b_CHROUT
+b_chrin
+
+maybe
+bench:b cnt init
+	b_cnt_stop
+
+prog eep:
+		b_set_dly
+		b_exe_msdly
+		
+xmodem:
+		b_set_dly
+		b_exe_msdly
+		B_EXE_LGDLY  
