@@ -5,7 +5,7 @@ The Versatile Micro Computer (VMC for short) is a 6502 platform designed to be P
 The VMC was designed as a project to express everything I have leared in electrical engineering,
 and as a way to learn more concepts in electrical engineering, computer engineering and computer science
 
-## Reposotory layout
+## Repository layout
 
 Hardware: KiCad files for the Hardware side of the VMC. Global licence applies
 Reference: Reference documents. Licence depends on file
