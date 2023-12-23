@@ -42,7 +42,7 @@ Z_CalcChecksumMSB	:= $F7 ;Local, MSB of Above ^
 
 
 
-
+.endscope
 .segment "CODE"
 
 Entrypoint:				; General housekeeping, setting banks correctly

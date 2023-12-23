@@ -42,7 +42,7 @@ Z_CalcChecksumMSB	:= $F7 ;Local, MSB of Above ^
 
 
 
-.endscope
+
 .segment "CODE"
 
 Entrypoint:				; General housekeeping, setting banks correctly
@@ -77,7 +77,14 @@ dex 					;ldx #%00001011 avoided as 1011 is 1 less than 12 (-1)
 	.else	
 	sta R_COMM_DIV_MSB 
 	.endif
-stx R_COMM_LINE_CTRL 	;sta $6071 ; IER (not neccisary as ier set to 00 on reset (-3)
+stx R_COMM_LINE_CTRL 
+						;sta $6071 ; IER (not neccisary as ier set to 00 on reset (-3)
+
+
+	.ifpc02
+		ldy StrVMC-Str ; (vmc)
+		jsr Send_MSG
+	.endif
 					
 RamClear:
 .scope
@@ -93,10 +100,7 @@ bne Loop
 inc $01
 cpx $01			
 bne Loop  ;(jmp loop) main will fall thru (-4)
-	.ifpc02
-		ldy StrVMC-Str ; (vmc)
-		jsr Send_MSG
-	.endif
+
 
 .endscope
 
@@ -109,16 +113,10 @@ Main:
 
 
 .scope	Header 			;copies header values only to zp
-	ldy StrRDY-Str
-	jsr Send_MSG
 	lda #$f8 			;setting temporary write location for header
-	sta Z_CountLSB 
-	.ifpc02	
-		stz Z_CountMSB
-	.else
-		lda #$00
-		sta Z_CountMSB
-	.endif
+	sta Z_CountLSB		 ;stz Z_CountMSB not needed as ram was just zeroed
+	ldy StrRDY-Str
+	jsr Send_MSG				
 	Loop:
 	jsr Read
 	inc Z_CountLSB ;lda cmp removed by switching write location to f8-ff
@@ -141,7 +139,7 @@ Main:
 		Fail_Branch: ; second jump to ram clear is too far, chaining to fix.
 		bra RamClear
 	.else
-		jmp Header::Fail_Branch ;too far to use branch
+		beq Ramclear ; Send_MSG always returns as equal
 	.endif
 	Skip2:
 .endscope
@@ -190,7 +188,7 @@ jsr Send_MSG
 	.ifpc02
 		bra Header::Fail_Branch
 	.else
-		jmp Header::Fail_Branch ;too far to use branch
+		beq Header::Fail_Branch  ; Send_MSG always returns as equal
 	.endif  ;too far for branch
 .endscope
 
@@ -206,7 +204,7 @@ jsr Send_MSG
 
 
 Read:	; reads a byte in to a location in memory defined by Z_Count, and adds it to checksum calculation
-		; 38 cycles (15.2us at 2.5mhz, 65kb/s) ((41 if nmos))
+		; 38 cycles (15.2us at 2.5mhz, 65kb/s) ((41 if nmos)) (((ignoting propogation time)))
 .scope
 	.ifpc02
 		
