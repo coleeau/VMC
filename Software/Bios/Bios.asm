@@ -54,7 +54,7 @@
 ;*				Main  				*
 ;************************************
 
-
+entrypoint:	
 
 
 
@@ -147,4 +147,53 @@
 ;  copy
 ; ROM UPDATE
 ;
-; =======
+; =======system info=======
+; version
+;			returns computer version and bios version
+
+
+
+
+
+
+
+
+;************************************
+;*				IRQ 				*
+;************************************
+
+;priority
+;1. timing
+;2. serial
+;3. i2c/gpio
+;4. joy
+;5. external
+
+.scope
+IRQ_Entrypoint:
+PHA
+PHX
+PHY
+LDA W_Intl_TIE ; start checking timer irq
+LSR
+BCC NotTimer
+LDA %11100010
+STA R_TIME_CTRL
+BIT R_TIME_0
+BEQ IRQ_TIMER
+NotTimer: ; Check timer
+LDA R_COMM_IRQ_STAT
+LSR
+BCC IRQ_COMM
+NotComm:
+
+
+
+
+
+
+
+
+
+
+IRQ_TIMER
