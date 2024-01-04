@@ -154,8 +154,12 @@ entrypoint:
 
 
 
+;************************************
+;*				PANIC				*
+;************************************
 
-
+;future routine when something crashes or goes wrong
+;will provide register, stack, zp and internal values. will also include entry reason
 
 
 ;************************************
@@ -186,7 +190,22 @@ LDA R_COMM_IRQ_STAT
 LSR
 BCC IRQ_COMM
 NotComm:
-
+BIT R_PIA_GPIO_CTRL
+BCS IRQ_GPIO_A
+BVS IRQ_GPIO_B
+BIT R_PIA_JOY_CTRL
+BCS IRQ_KEY
+BVS IRQ_TP22
+NotPIA:
+;write ext later
+LDA #$
+JSR PANIC
+IRQ_Done:
+PLY
+PLX
+PLA
+RTI
+.endscope
 
 
 
@@ -197,3 +216,7 @@ NotComm:
 
 
 IRQ_TIMER
+
+
+
+
