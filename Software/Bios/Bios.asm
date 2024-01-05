@@ -122,19 +122,68 @@ entrypoint:
 ; rom bankswitch
 ; chram bankswitch
 
+0000101010001110
 
 
+10010011
+00010010
 
 
-
-
-; --------- local routines ---------
+;************************************
+;*			Local Routine 			*
+;************************************
 ; ======8bit======
-; 8bit multi
-; 8bit divide
+.scope
+B_Mult_8:  ;ZP_Math_1 is multiplied by ZP_Math_2.
+		    ;Answer is LE word in ZP_Math_1 and ZP_Math_2
+			;Loop from Leif Stensson
+PHA
+PHX
+LDA #0
+LDX #$8
+LSR ZP_Math_1
+Loop:
+BCC no_add
+CLC
+ADC ZP_Math_2
+no_add:
+ROR
+ROR ZP_Math_1
+DEX
+BNE Loop
+STA ZP_Math_2
+PLX
+PLA
+RTS
+
+.endscope
+
+.scope
+B_Div_8	;ZP_Math_1 is divided by ZP_Math_2
+		;Quotient in ZP_Math_1, Remainder in ZP_Math_2
+		;from http://6502org.wikidot.com/software-math-intdiv, slightly modified by me
+PHA
+PHX
+LDA #0
+LDX #$8
+ASL ZP_Math_1
+Loop:
+ROL
+CMP ZP_Math_2
+BCC no_sub
+SBC ZP_Math_2
+no_sub:
+ROL ZP_Math_1
+DEX
+BNE Loop
+STA ZP_Math_2
+PHX
+PHA
+RTS
+
 ;
 ;  ======16bit======
-;   16bit inc/dec
+; 
 ;   16bit add/sub
 ;   16bit multiply
 ;   16bit divide
