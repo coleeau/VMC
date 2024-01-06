@@ -1,0 +1,87 @@
+RLE INFO
+5 modes
+
+
+file starts with magic string JDRLE (7bit ascii)
+
+
+
+
+Command mode
+DAAABBBB D=0 means Command, D=1 eaquals meta data
+where AAAA is Command and BBBB is argument
+0000xxxx | end of file
+0001BBBB | Change mode where b is mode
+001CBBBB | Data is now for bitplane N (5 bit number where C is msb)
+0100xxxC | Change which bitplane (where C=1 means inc and C=0 means Dec)
+01xxxxxx | reserved
+1000xxxx | Local Checksum define
+1001xxxx | global Checksum define
+101Xxxxx | reserved
+1100xxxx | Define id of compressed data in a database
+1101xxxx | define Vertical dimmension of current data in database
+1110xxxx | define Horizontal dimmension of current data
+1111xxxx | Version file was encoded in (Magic Byte)
+
+
+
+
+mode 1 (0000)
+Axxxxxxx | RLE  (where A = bit encoded, and x is length)
+X0000000 | Enter Command Mode (X is dont care)
+
+
+Mode 2 (0001)
+AAxxxxxx | RLE (where A is pair encoded and x is length)
+XX000000 | Enter command mode
+
+
+mode 4 (0010)
+AAAAxxxx | RLE (where A is nible encoded and x is length)
+XXXX0000 | Enter Command mode
+
+
+mode 8 (0011)
+AAAAAAAA xxxxxxxx | RLE (where A is byte encoded and x is length)
+00000000 00000000 | Enter Command mode
+
+
+
+
+
+
+
+For 1.0
+
+0001BBBB | Change mode where b is mode
+
+0XXXxxxx | reserved
+1000xxxx | reserved
+1001xxxx | global Checksum define
+101Xxxxx | reserved
+1100xxxx | reserved
+1101xxxx | define Vertical dimmension of current data in database
+1110xxxx | define Horizontal dimmension of current data
+1111xxxx | Version file was encoded in (Magic Byte)
+
+
+
+
+mode 1 (0000)
+Axxxxxxx | RLE  (where A = bit encoded, and x is length)
+X0000000 | Enter Command Mode (X is dont care)
+
+
+Mode 2 (0001)
+AAxxxxxx | RLE (where A is pair encoded and x is length)
+XX000000 | Enter command mode
+
+
+mode 4 (0010)
+AAAAxxxx | RLE (where A is nible encoded and x is length)
+XXXX0000 | Enter Command mode
+
+
+mode 8 (0011)
+AAAAAAAA xxxxxxxx | RLE (where A is byte encoded and x is length)
+00000000 00000000 | Enter Command mode
