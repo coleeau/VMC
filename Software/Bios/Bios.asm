@@ -41,7 +41,7 @@
 ;************************************
 ;*				Memory				*
 ;************************************
-
+ZP_COMM_Stat :=        ; b7=
 
 
 
@@ -90,14 +90,29 @@ entrypoint:
 ; ======Serial=======
 ; rx char
 ;		 recive one char, destination set in command or from table
+
 ; rx n char
 ;		 recive n charecters, destination set in command or from table
 ; rx term char
 ;		recive charecters until a specified termination value is recived (ie nul, cr, etc)
 ; set speed
 ;		self explanitory
-; tx char
-;		send one charecter
+
+B_TX_Char: ;sends Character in A register. Clobbers Carry: Carry clear when succsessful, Set when failed
+.scope
+	CLC
+	;check serial status
+	BIT R_COMM_LINE_STAT
+	BVS OK ;full
+	SEC
+	RTS
+OK:
+	STA R_COMM_TXRX
+	RTS
+	
+	
+	
+	
 ; tx n char
 ;		send n char from location specified in command or in table
 ;tx char term
@@ -122,11 +137,7 @@ entrypoint:
 ; rom bankswitch
 ; chram bankswitch
 
-0000101010001110
 
-
-10010011
-00010010
 
 
 ;************************************
