@@ -208,6 +208,9 @@ I2C_Start:
 	PLA
 	RTS
 
+I2C_Ack_Nack_Write: ;LDA #$00 for Ack, LDA #$01 for Nack
+	LDX #$01
+	.byte $2C	;Bit trick to Skip LDX $#08
 I2C_Write:
 	LDX #$08
 @Loop:
@@ -249,16 +252,12 @@ I2C_Ack_Read:
 @ACK
 	STZ R_PIA_I2C_CTRL
 	RTS
+	
+	
+I2C_Read:
+	PHA
+	
 
-I2C_Ack_Write:
-6
-
-; send 
-;
-; read
-;		read packet and store at a specified buffer (option to wait for response)
-;
-;
 ; ======clock======
 ; set cpu speed
 ; set video speed (might not be its own thing due to trying to avoid doing that)
