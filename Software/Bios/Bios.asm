@@ -45,6 +45,8 @@ ZP_Math_1
 ZP_Math_2
 ZP_INT_BSR_MIRROR
 ZP_INT_SCRATCH_1
+ZP_Pointer_LSB
+ZP_Pointer_MSB
 
 
 
@@ -90,7 +92,7 @@ entrypoint:
 ;
 ;
 ; ======Serial=======
-B_RX_Char: ;Receives Character in A register. Clobbers Carry: Carry Set when succsessful, CLeared when failed
+B_COMM_RX_Char: ;Receives Character in A register. Clobbers Carry: Carry Set when succsessful, CLeared when failed
 	LDA R_COMM_LINE_STAT
 	ROR
 	BCS OK
@@ -101,10 +103,35 @@ B_RX_Char: ;Receives Character in A register. Clobbers Carry: Carry Set when suc
 
 ; rx n char
 ;		 recive n charecters, destination set in command or from table
-; rx term char
-;		recive charecters until a specified termination value is recived (ie nul, cr, etc)
+B_COMM_RX_Str: ;Recives String From ZP_Pointer with Offset of A. terminates on Nul or CR. returns with length in A register
+@Loop:
+	PHY
+	PHX
+	LDX #$00
+	TAY
+	LDA R_COMM_LINE_STAT
+	ROR
+	BCC Loop
+	LDA R_COMM_TXRX
+	STA (ZP_Pointer_LSB), Y
+	BEQ Done
+	CMP #$0d
+	BEQ Done
+	INY
+	INX
+	BRA Loop
+@Done:
+	TXA
+	PLX
+	PLY
+	RTS
+	
 
-B_TX_Char: ;sends Character in A register. Clobbers Carry: Carry Set when succsessful, Cleared when failed
+	
+	
+@End:
+
+B_COMM_TX_Char: ;sends Character in A register. Clobbers Carry: Carry Set when succsessful, Cleared when failed
 	;check serial status
 	BIT R_COMM_LINE_STAT
 	BVS OK ;full
@@ -117,9 +144,24 @@ B_TX_Char: ;sends Character in A register. Clobbers Carry: Carry Set when succse
 	
 ; tx n char
 ;		send n char from location specified in command or in table
-;tx char term
-;		send char until termination found. location specified in command or in table
 
+B_COMM_TX_Str ; terminates on 0
+	PHY
+	TYA
+@Loop:
+	LDA (ZP_Pointer_LSB), Y
+	BEQ End
+@Loop2:
+	BIT R_COMM_LINE_STAT
+	BVC	Loop2 ;full
+	STA R_COMM_TXRX
+	INY
+	BRA Loop
+	
+@End:
+	PLY
+	RTS
+	
 B_COMM_Set_Speed: 	;Sets speed based on value A in table. if Carry Clear and A=/=FF, value larger than table
 	PHX				;If Carry Clear and A=FF, Speed not possible. If Carry Set, sucsessful
 	TAX
