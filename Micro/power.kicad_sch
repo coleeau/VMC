@@ -649,7 +649,7 @@
     (property "Reference" "U51" (at 58.42 73.66 0)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Value" "AP2127K-3.3" (at 58.42 76.2 0)
+    (property "Value" "v-3.3" (at 58.42 76.2 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Footprint" "Package_TO_SOT_SMD:SOT-23-5" (at 58.42 74.295 0)
