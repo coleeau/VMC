@@ -176,15 +176,15 @@ I2C_Main:
 	JSR I2C_Start
 	PHX	
 	JSR I2C_Write
-	JSR I2C_Ack_Read
+	JSR I2C_Read_Ack
 	PLA
 	JSR I2C_Write
-	JSR I2C_Ack_Read
+	JSR I2C_Read_Ack
 	ROR ZP_INT_SCRATCH_1
 	BCS @Read
 	TYA
 	JSR I2C_Write
-	JSR I2C_Ack_Read
+	JSR I2C_Read_Ack
 	JSR I2C_Stop
 	RTS
 @Read:	
@@ -192,7 +192,12 @@ I2C_Main:
 	LDA ZP_INT_SCRATCH_1
 	JSR I2C_Start
 	JSR I2C_Write
-	JSR I2C_Ack_Read
+	JSR I2C_Read_Ack
+	JSR I2C_Read
+	PHA
+	LDA #$00
+	JSR I2C_Write_Ack
+	PLA
 	JSR I2C_Stop
 	
 
@@ -240,24 +245,47 @@ I2C_Write:
 	BNE Loop
 	RTS
 	
-I2C_Ack_Read:
+;I2C_Ack_Read:
+;	PHA
+;	STZ R_PIA_I2C
+;	LDA #b00000100
+;	STA R_PIA_I2C_CTRL
+;	BIT R_PIA_I2C
+;	;ADD wait?
+;	BNE ACK
+	;make it obv that NACK
+;@ACK
+;	STZ R_PIA_I2C_CTRL
+;	RTS
+	
+I2C_Read_Ack
+	LDX #$01
+	.byte $2C ;bit trick
+I2C_Read:
+	LDX #$08
+@Loop:
 	PHA
+	LDA #b01000000
+	STA R_PIA_I2C
 	STZ R_PIA_I2C
 	LDA #b00000100
 	STA R_PIA_I2C_CTRL
+	; add wait?
+	PLA
 	BIT R_PIA_I2C
-	;ADD wait?
-	BNE ACK
-	;make it obv that NACK
-@ACK
+	BNE I2C_Read_0
+@I2C_Read_1:
+	SEC
+	.byte #$24
+@I2C_Read_0:
+	CLC
+	ROL 	;Push not needed
 	STZ R_PIA_I2C_CTRL
+	STZ R_PIA_I2C
+	DEX
+	BNE Loop
 	RTS
 	
-	
-I2C_Read:
-	PHA
-	
-
 ; ======clock======
 ; set cpu speed
 ; set video speed (might not be its own thing due to trying to avoid doing that)
