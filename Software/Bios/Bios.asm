@@ -44,9 +44,11 @@
 ZP_Math_1
 ZP_Math_2
 ZP_INT_BSR_MIRROR
+ZP_INT_TIE_MIRROR
 ZP_INT_SCRATCH_1
 ZP_Pointer_LSB
 ZP_Pointer_MSB
+ZP_Interupt_Stat					; b7= timer
 
 
 
@@ -59,7 +61,11 @@ ZP_Pointer_MSB
 ;************************************
 
 entrypoint:	
+SEI
+LDA B_INT
 
+
+; write control word to prevent out from going low
 
 
 ; ======Video=====
@@ -85,6 +91,19 @@ entrypoint:
 ; ======timer=====
 ; Timer setup
 ;	 	enable, and start timer of certain length
+B_TIME_Delay ; start delay with LSB of A and MSB of X cycles. returns 5 cycles into the count due to the RTS instruction. 
+	PHA 
+	LDA #b00110000
+	STA R_TIME_CTRL
+	ROR ZP_INT_TIE_MIRROR
+	SEC
+	ROL ZP_INT_TIE_MIRROR
+	PLA
+	STA R_TIME_0
+	STX R_TIME_0
+	RTS
+	
+
 ; pulse
 ;		specifiy frequency and period for one or both channels
 ; pulse mute
@@ -525,16 +544,24 @@ RTS
 .scope
 IRQ_Entrypoint:
 PHA
-PHX
-PHY
-LDA W_Intl_TIE ; start checking timer irq
+LDA ZP_INT_TIE_MIRROR ; start checking timer irq
 LSR
 BCC NotTimer
-LDA %11100010
+LDA #b11100010
 STA R_TIME_CTRL
 BIT R_TIME_0
-BEQ IRQ_TIMER
+BNE NotTimer
+IRQ_Timer ; done in line for speed reasons. 49 cycles 24.5 us response
+LDA #b11111110
+AND ZP_INT_TIE_MIRROR
+STA ZP_INT_TIE_MIRROR
+LDA #$80
+STA	ZP_Interupt_Stat
+PLA
+RTI
 NotTimer: ; Check timer
+PHX
+PHY
 LDA R_COMM_IRQ_STAT
 LSR
 BCC IRQ_COMM
@@ -560,11 +587,11 @@ RTI
 
 
 
+;7 3 2 2 2 4 4 2 2 3 3 2 3 4 6
 
 
 
 
-IRQ_TIMER
 
 
 

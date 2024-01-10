@@ -1,0 +1,4 @@
+82c54 
+at 2mhz, one clock pulse is .5 us
+can count up to 32.767 ms
+5 cycles before back from enable sub routine
