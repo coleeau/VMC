@@ -3414,7 +3414,7 @@
     (property "Value" "Button C" (at 170.18 91.44 90)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "" (at 175.26 81.28 0)
+    (property "Footprint" "TestPoint:TestPoint_Pad_D2.5mm" (at 175.26 81.28 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 175.26 81.28 0)

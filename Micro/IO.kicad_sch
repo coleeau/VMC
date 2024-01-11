@@ -3253,6 +3253,10 @@
     (effects (font (size 1.27 1.27)) (justify left))
     (uuid 83c16197-4eb5-4ca1-b9d8-bb387ba517b4)
   )
+  (hierarchical_label "CLK2" (shape input) (at 129.54 124.46 180) (fields_autoplaced)
+    (effects (font (size 1.27 1.27)) (justify right))
+    (uuid 8df141c3-43f4-434b-847b-c6e037ed8e0d)
+  )
   (hierarchical_label "~{IRQ_SERIAL}" (shape input) (at 163.83 140.97 0) (fields_autoplaced)
     (effects (font (size 1.27 1.27)) (justify left))
     (uuid afbd6cc0-6fda-4006-8532-91de424b4eb9)
@@ -5015,6 +5019,10 @@
     (pin "P2E" input (at 156.21 109.22 0)
       (effects (font (size 1.27 1.27)) (justify right))
       (uuid 9326ef4c-f20b-4b92-9874-fce0b5f44068)
+    )
+    (pin "CLK2" input (at 129.54 124.46 180)
+      (effects (font (size 1.27 1.27)) (justify left))
+      (uuid d4cb490a-9dfe-4c87-ba54-39ba2fe0d168)
     )
     (instances
       (project "Micro"
