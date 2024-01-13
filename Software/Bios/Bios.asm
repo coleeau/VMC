@@ -229,28 +229,28 @@ I2C_Init:
 	CLC
 	ROL
 	PHA
-	LDA #b00000100
-	STA R_PIA_I2C_CTRL
-	STZ R_PIA_I2C
-	STZ R_PIA_I2C_CTRL
+	LDA #b00000100 			;Access R/W @ R_PIA_I2C
+	STA R_PIA_I2C_CTRL 	
+	STZ R_PIA_I2C			;set all pins to output 0 when in Output mode)
+	STZ R_PIA_I2C_CTRL		;Access DDR @ R_PIA_I2C
 	PLA
 I2C_Main:
 	JSR I2C_Start
-	PHX	
+	PHX						;ID Byte
 	JSR I2C_Write
 	JSR I2C_Read_Ack
 	PLA
-	JSR I2C_Write
+	JSR I2C_Write			;Register location
 	JSR I2C_Read_Ack
-	ROR ZP_INT_SCRATCH_1
+	ROR ZP_INT_SCRATCH_1	;Check if Read or Write
 	BCS @Read
-	TYA
+	TYA						;Byte to write
 	JSR I2C_Write
 	JSR I2C_Read_Ack
 	JSR I2C_Stop
 	RTS
 @Read:	
-	ROL ZP_INT_SCRATCH_1
+	ROL ZP_INT_SCRATCH_1						; Might move to before branch, depends on timing
 	LDA ZP_INT_SCRATCH_1
 	JSR I2C_Start
 	JSR I2C_Write
@@ -266,11 +266,11 @@ I2C_Main:
 
 I2C_Start:
 	PHA
-	LDA #b00000000
+	LDA #b00000000			;SDA Hi SCL Hi
 	STA R_PIA_I2C
-	LDA #b10000000
+	LDA #b10000000			;SDA Hi SCL Lo
 	STA R_PIA_I2C
-	LDA #b11000000
+	LDA #b11000000			;SDA Lo SCL Lo
 	STA R_PIA_I2C
 	PLA
 	RTS
@@ -281,25 +281,25 @@ I2C_Ack_Nack_Write: ;LDA #$00 for Ack, LDA #$01 for Nack
 I2C_Write:
 	LDX #$08
 @Loop:
-	ASL
+	ASL						;Shift current bit to send into carry
 	PHA
-	BCC @I2C_Write_0
+	BCC @I2C_Write_0		;Checks what the current bit is
 @I2C_Write_1:
-	LDA #b01000000 
+	LDA #b01000000 			;SDA Hi SCL Lo
 	STA R_PIA_I2C
-	LDA #b00000000
+	LDA #b00000000			;SDA Hi SCL Hi
 	STA R_PIA_I2C
 	;Add wait?
-	LDA #b01000000 ;send 1
+	LDA #b01000000 			;SDA Hi SCL Lo
 	STA R_PIA_I2C
 	BRA @Skip
 @I2C_Write_0:
-	LDA #b11000000 
+	LDA #b11000000 			;SDA Lo SCL Lo
 	STA R_PIA_I2C
-	LDA #b10000000
+	LDA #b10000000			;SDA Lo SCL Hi
 	STA R_PIA_I2C
 	;Add wait?
-	LDA #b11000000 ;send 1
+	LDA #b11000000 			;SDA Lo SCL Lo
 	STA R_PIA_I2C
 @Skip:
 	PLA
@@ -327,23 +327,25 @@ I2C_Read:
 	LDX #$08
 @Loop:
 	PHA
-	LDA #b01000000
+	LDA #b01000000			;Here, Setting Clock to Lo and SDA to 1 (unasserted)
 	STA R_PIA_I2C
-	STZ R_PIA_I2C
-	LDA #b00000100
+	STZ R_PIA_I2C			;Clock is now Hi
+	LDA #b00000100			;Access R/W @ R_PIA_I2C
 	STA R_PIA_I2C_CTRL
 	; add wait?
 	PLA
-	BIT R_PIA_I2C
+	BIT R_PIA_I2C			;Check SDA
 	BNE I2C_Read_0
 @I2C_Read_1:
 	SEC
 	.byte #$24
 @I2C_Read_0:
 	CLC
-	ROL 	;Push not needed
-	STZ R_PIA_I2C_CTRL
-	STZ R_PIA_I2C
+	ROL 					
+	STZ R_PIA_I2C_CTRL		;Access DDR @ R_PIA_I2C
+	PHA
+	LDA #b01000000
+	STA R_PIA_I2C			
 	DEX
 	BNE Loop
 	RTS
