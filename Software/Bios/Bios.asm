@@ -92,13 +92,12 @@ LDA B_INT
 ; Timer setup
 ;	 	enable, and start timer of certain length
 B_TIME_Delay ; start delay with LSB of A and MSB of X cycles. returns 5 cycles into the count due to the RTS instruction. 
-			;39 cycles 19.5 us @2mhz  (+ 10 cycles to set up 5us @2mhz for a total of 24.5us)
+			;34 cycles 17 us @2mhz  (+ 10 cycles to set up 5us @2mhz for a total of 24.5us)
 	PHA   					;3
 	LDA #b00110000			;2
 	STA R_TIME_CTRL			;4
-	ROR ZP_INT_TIE_MIRROR	;5
-	SEC						;2
-	ROL ZP_INT_TIE_MIRROR	;5
+	LDA #b00000001			;2
+	TSB	ZP_INT_TIE_MIRROR	;5
 	PLA						;4
 	STA R_TIME_0			;4
 	STX R_TIME_0			;4
@@ -196,17 +195,14 @@ B_COMM_Set_Speed: 	;Sets speed based on value A in table. if Carry Clear and A=/
 @BAD:
 	RTS
 @OK:
-	LDA #$80
-	ADC R_COMM_LINE_CTRL
-	STA R_COMM_LINE_CTRL
+	LDA #b10000000
+	TSB R_COMM_LINE_CTRL
 	LDA COMM_Speed_Low, X
 	STA R_COMM_DIV_LSB
 	LDA COMM_Speed_Hi, X
 	STA R_COMM_DIV_MSB
-	LDA R_COMM_LINE_CTRL
-	SEC
-	SBC #$80
-	STA R_COMM_LINE_CTRL
+	LDA #b10000000
+	TRB R_COMM_LINE_CTRL
 	PLX
 	RTS
 		
