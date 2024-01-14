@@ -43,12 +43,15 @@
 ;************************************
 ZP_Math_1
 ZP_Math_2
+ZP_Math_3
+ZP_Math_4
 ZP_INT_BSR_MIRROR
 ZP_INT_TIE_MIRROR
 ZP_INT_SCRATCH_1
 ZP_Pointer_LSB
 ZP_Pointer_MSB
 ZP_Interupt_Stat					; b7= timer
+ZP_INT_PANIC_1						; Not reserved per say, but will be destroyed if B_Panic is called. 
 
 
 
@@ -60,9 +63,9 @@ ZP_Interupt_Stat					; b7= timer
 ;*				Main  				*
 ;************************************
 
-entrypoint:	
-SEI
-LDA B_INT
+Entrypoint:	
+	SEI
+	LDA B_INT
 
 
 ; write control word to prevent out from going low
@@ -151,7 +154,8 @@ B_COMM_RX_Str: ;Recives String From ZP_Pointer with Offset of A. terminates on N
 @End:
 
 B_COMM_TX_Char: ;sends Character in A register. Clobbers Carry: Carry Set when succsessful, Cleared when failed
-	;check serial status
+	;check serial status 
+	
 	BIT R_COMM_LINE_STAT
 	BVS OK ;full
 	CLC
@@ -447,24 +451,24 @@ B_BANKSW_ROM:		;set 0 to enable rom; b0 = High Rom, b1 = Low Rom
 B_Mult_8:  ;ZP_Math_1 is multiplied by ZP_Math_2.
 		    ;Answer is LE word in ZP_Math_1 and ZP_Math_2
 			;Loop from Leif Stensson
-PHA
-PHX
-LDA #0
-LDX #$8
-LSR ZP_Math_1
+	PHA
+	PHX
+	LDA #0
+	LDX #$8
+	LSR ZP_Math_1
 @Loop:
-BCC no_add
-CLC
-ADC ZP_Math_2
+	BCC no_add
+	CLC
+	ADC ZP_Math_2
 @no_add:
-ROR
-ROR ZP_Math_1
-DEX
-BNE Loop
-STA ZP_Math_2
-PLX
-PLA
-RTS
+	ROR
+	ROR ZP_Math_1
+	DEX
+	BNE Loop
+	STA ZP_Math_2
+	PLX
+	PLA
+	RTS
 
 .endscope
 
@@ -472,24 +476,24 @@ RTS
 B_Div_8	;ZP_Math_1 is divided by ZP_Math_2
 		;Quotient in ZP_Math_1, Remainder in ZP_Math_2
 		;from http://6502org.wikidot.com/software-math-intdiv, slightly modified by me
-PHA
-PHX
-LDA #0
-LDX #$8
-ASL ZP_Math_1
+	PHA
+	PHX
+	LDA #0
+	LDX #$8
+	ASL ZP_Math_1
 @Loop:
-ROL
-CMP ZP_Math_2
-BCC no_sub
-SBC ZP_Math_2
+	ROL
+	CMP ZP_Math_2
+	BCC no_sub
+	SBC ZP_Math_2
 @no_sub:
-ROL ZP_Math_1
-DEX
-BNE Loop
-STA ZP_Math_2
-PHX
-PHA
-RTS
+	ROL ZP_Math_1
+	DEX
+	BNE Loop
+	STA ZP_Math_2
+	PHX
+	PHA
+	RTS
 
 B_Nybble_Swap ; by David Galloway
 	ASL
@@ -501,8 +505,30 @@ B_Nybble_Swap ; by David Galloway
 	RTS
 ;
 ;  ======16bit======
-; 
-;   16bit add/sub
+B_Add_16:		;Math_1-2 + Math_3-4. Stored In Math_1-2. carry is valid Little Endian
+	PHA
+	CLC
+	LDA ZP_Math_1
+	ADC ZP_Math_3
+	STA ZP_Math_1
+	LDA ZP_Math_2
+	ADC ZP_Math_4
+	STA ZP_Math_2
+	PLA
+	RTS
+	
+B_Sub_16:		;Math_1-2 - Math_3-4. Stored In Math_1-2. carry is valid Little Endian
+	PHA
+	SEC
+	LDA ZP_Math_1
+	SBC ZP_Math_3
+	STA ZP_Math_1
+	LDA ZP_Math_2
+	SBC ZP_Math_4
+	STA ZP_Math_2
+	PLA
+	RTS
+	
 ;   16bit multiply
 ;   16bit divide
 ;
@@ -516,8 +542,8 @@ B_Nybble_Swap ; by David Galloway
 ;
 ; =======system info=======
 B_VER:		;returns computer version and bios version in A register, $FF reserved
-LDA #$00
-RTS
+	LDA #$00
+	RTS
 ;0=VMC Rev 1
 ;0= bios major Rev 1
 
@@ -527,8 +553,116 @@ RTS
 
 ;future routine when something crashes or goes wrong
 ;will provide register, stack, zp and internal values. will also include entry reason
+Panic:
+	STA R_COMM_SPAR
+Panic_Get_P_No_PHP: ;44 bytes
+	BMI @N		;If no branch, /N
+		BVS @/NV		;If no branch /N/V
+			BEQ @/N/VZ		
+				LDA #b00000000 ; /N/V/Z
+				BRA @Done
+				@/N/VZ:
+				LDA #b00000010
+				BRA @Done
+		@/NV
+			BEQ @/NVZ		
+				LDA #b01000000 ; /N/V/Z
+				BRA @Done
+				@/NVZ:
+				LDA #b01000010
+				BRA @Done
+	@N
+			BEQ @N/VZ		
+				LDA #b10000000 ; /N/V/Z
+				BRA @Done
+				@N/VZ:
+				LDA #b10000010
+				BRA @Done
+		@/NV
+			BEQ @NVZ		
+				LDA #b11000000 ; /N/V/Z
+				BRA @Done
+				@/NVZ:
+				LDA #b11000010
+				BRA @Done
+@Done
+	STA ZP_INT_PANIC_1
+	LDA #$50					;Send PANIC prompt
+	STA R_COMM_TXRX
+	LDA #$41
+	STA R_COMM_TXRX
+	LDA #$4E
+	STA R_COMM_TXRX
+	LDA #$49
+	STA R_COMM_TXRX
+	LDA #$43
+	STA R_COMM_TXRX
+	LDA #$0D
+	STA R_COMM_TXRX
+	LDA #$0A
+	STA R_COMM_TXRX
+	LDA R_COMM_SPAR
+	STX R_COMM_SPAR
+	TAX 
+	
+	
+
+	
+@Send: ;NVZ
+	BIT R_COMM_LINE_STAT
+	BVC @Send
+	STA R_COMM_TXRX
+
+@done
 
 
+;routine that clobbers mem
+Panic:
+	STA $0201 ;A
+Panic_Get_P_No_PHP: ;44 bytes
+	BMI @N		;If no branch, /N
+		BEQ @/NZ		
+			LDA #b00000000 ; /N/V/Z
+			BRA @Done
+			@/NZ:
+			LDA #b00000010
+			BRA @Done
+	@N
+		BEQ @NZ		
+			LDA #b10000000 ; /N/V/Z
+			BRA @Done
+			@NZ:
+			LDA #b10000010
+			BRA @Done
+
+@Done
+	STA $0200	;partial P
+	STX $0202	;X
+	STY $0203	;Y
+	TSX
+	STA $0204	;SP
+	PLX
+	PHP
+	PLY
+	PHX
+	LDA $0200
+	STY $0200
+	TAY
+	LDA #b10000010
+	TRB $0200
+	TYA
+	TSB $0200	;P
+	
+	
+	
+	
+	
+
+	
+@Send: ;NVZ
+	BIT R_COMM_LINE_STAT
+	BVC @Send
+	STA R_COMM_TXRX
 ;************************************
 ;*				IRQ 				*
 ;************************************
@@ -542,44 +676,44 @@ RTS
 
 .scope
 IRQ_Entrypoint:
-PHA
-LDA ZP_INT_TIE_MIRROR ; start checking timer irq
-LSR
-BCC NotTimer
-LDA #b11100010
-STA R_TIME_CTRL
-BIT R_TIME_0
-BNE NotTimer
+	PHA
+	LDA ZP_INT_TIE_MIRROR ; start checking timer irq
+	LSR
+	BCC NotTimer
+	LDA #b11100010
+	STA R_TIME_CTRL
+	BIT R_TIME_0
+	BNE NotTimer
 IRQ_Timer ; done in line for speed reasons. 49 cycles 24.5 us response
-LDA #b11111110
-AND ZP_INT_TIE_MIRROR
-STA ZP_INT_TIE_MIRROR
-LDA #$80
-STA	ZP_Interupt_Stat
-PLA
-RTI
+	LDA #b11111110
+	AND ZP_INT_TIE_MIRROR
+	STA ZP_INT_TIE_MIRROR
+	LDA #$80
+	STA	ZP_Interupt_Stat
+	PLA
+	RTI
 NotTimer: ; Check timer
-PHX
-PHY
-LDA R_COMM_IRQ_STAT
-LSR
-BCC IRQ_COMM
+	PHX
+	PHY
+	LDA R_COMM_IRQ_STAT
+	LSR
+	BCC IRQ_COMM
 NotComm:
-BIT R_PIA_GPIO_CTRL
-BCS IRQ_GPIO_A
-BVS IRQ_GPIO_B
-BIT R_PIA_JOY_CTRL
-BCS IRQ_KEY
-BVS IRQ_TP22
+	BIT R_PIA_GPIO_CTRL
+	BCS IRQ_GPIO_A
+	BVS IRQ_GPIO_B
+	BIT R_PIA_JOY_CTRL
+	BCS IRQ_KEY
+	BVS IRQ_TP22
 NotPIA:
 ;write ext later
-LDA #$
-JSR PANIC
+	LDA #$
+	JSR B_Panic
 IRQ_Done:
-PLY
-PLX
-PLA
-RTI
+	PLY
+	PLX
+	PLA
+	RTI
 .endscope
 
 
