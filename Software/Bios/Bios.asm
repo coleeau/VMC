@@ -618,7 +618,7 @@ Panic_Get_P_No_PHP: ;44 bytes
 
 ;routine that clobbers mem
 Panic:
-	STA $0201 ;A
+	STA $0200 ;A
 Panic_Get_P_No_PHP: ;44 bytes
 	BMI @N		;If no branch, /N
 		BEQ @/NZ		
@@ -635,34 +635,90 @@ Panic_Get_P_No_PHP: ;44 bytes
 			LDA #b10000010
 			BRA @Done
 
-@Done
-	STA $0200	;partial P
-	STX $0202	;X
-	STY $0203	;Y
+Panic_Get_Registers
+	STA $0204	;partial P
+	STX $0201	;X
+	STY $0202	;Y
 	TSX
-	STA $0204	;SP
+	STA $0203	;SP
 	PLX
 	PHP
 	PLY
 	PHX
-	LDA $0200
-	STY $0200
+	LDA $0204
+	STY $0204
 	TAY
 	LDA #b10000010
-	TRB $0200
+	TRB $0204
 	TYA
-	TSB $0200	;P
+	TSB $0204	;P
+	CLD
+Panic_Send Prompt:
+	LDX #$00
+	LDA Panic_Prompts, X
+	BEQ @Done
+@Wait
+	BIT R_COMM_LINE_STAT
+	BVC @Wait
+	STA R_COMM_TXRX
+	INX
+@Done
+	LDX #$00
+	LDA 
+@JumpA
+	LDA $0200, X
+Print_ASCII:
+	TAY
+	CLC
+	AND #b11110000
+	ROR
+	ROR
+	ROR
+	ROR
+	CMP $09
+	BCS @ABCDEF
+	ADC #$30
+	.byte $2C
+@ABCDEF	
+	ADC #$37
+@Wait2
+	BIT R_COMM_LINE_STAT
+	BVC @Wait2
+	STA R_COMM_TXRX
+	TYA
+	AND #b00001111
+	CMP $09
+	BCS @ABCDEF2
+	ADC #$30
+   .byte $2C
+@ABCDEF2
+	ADC #$37
+@Wait3
+	BIT R_COMM_LINE_STAT
+	BVC @Wait3
+	STA R_COMM_TXRX
+	BEQ @Done2
+	LDA #$20
+@Wait4
+	BIT R_COMM_LINE_STAT
+	BVC @Wait4
+	STA R_COMM_TXRX
+	BRA Print_ASCII
+	
 	
 	
 	
 	
 	
 
+
 	
-@Send: ;NVZ
-	BIT R_COMM_LINE_STAT
-	BVC @Send
-	STA R_COMM_TXRX
+	
+	
+Panic_Prompts:
+.asciiz "PANIC!\r\nA  X  Y  SP P\r\n"
+
+	
 ;************************************
 ;*				IRQ 				*
 ;************************************
