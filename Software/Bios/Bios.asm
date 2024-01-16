@@ -653,21 +653,79 @@ Panic_Get_Registers
 	TYA
 	TSB $0204	;P
 	CLD
-Panic_Send Prompt:
+Panic_Send_Prompt:
+	LDA <@JumpA
+	STA $0205
+	LDA >@JumpA
+	STA $0206
 	LDX #$00
 	LDA Panic_Prompts, X
 	BEQ @Done
-@Wait
+@JumpA
+
+	INX
+@Done:
+	LDX #$FF
+	LDA <@JumpB
+	STA $0205
+	LDA >@JumpB
+	STA $0206
+@JumpB:	INX
+	CPX #$05
+	BEQ Panic_Mem_Copy
+	LDA $0200, X
+	JMP Print_ASCII
+	
+Panic_Mem_Copy:
+	LDA <@JumpC
+	STA $0205
+	LDA >@JumpC
+	STA $0206
+	LDX #$00
+	STZ $0200
+	STZ $0201
+@Loop	
+	LDA ($0200)
+	JMP Panic_Print_ASCII
+@JumpC	INC $0200
+	BNE @Inc_skip
+	INC $0201
+	LDA #$02
+	CMP $0201
+	BEQ Done
+@Inc_skip	
+	INX
+	CMP #$10
+	BNE @CR_Skip
+	LDA #$0d
+@Wait5
+	BIT R_COMM_LINE_STAT
+	BVC @Wait5
+	STA R_COMM_TXRX
+	LDA #$0A
+@Wait6
+	BIT R_COMM_LINE_STAT
+	BVC @Wait6
+	STA R_COMM_TXRX
+	LDX #$00
+	BRA @Loop
+	
+	
+	
+	
+Done:	
+	
+	
+	
+Panic_Send	
 	BIT R_COMM_LINE_STAT
 	BVC @Wait
 	STA R_COMM_TXRX
-	INX
-@Done
-	LDX #$00
-	LDA 
-@JumpA
-	LDA $0200, X
-Print_ASCII:
+	JMP ($0200)
+	
+	
+	
+Panic_Print_ASCII:
 	TAY
 	CLC
 	AND #b11110000
@@ -697,13 +755,12 @@ Print_ASCII:
 	BIT R_COMM_LINE_STAT
 	BVC @Wait3
 	STA R_COMM_TXRX
-	BEQ @Done2
 	LDA #$20
 @Wait4
 	BIT R_COMM_LINE_STAT
 	BVC @Wait4
 	STA R_COMM_TXRX
-	BRA Print_ASCII
+	JMP ($0205)
 	
 	
 	
