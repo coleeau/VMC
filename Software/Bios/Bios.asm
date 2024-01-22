@@ -45,19 +45,22 @@ ZP_Math_1
 ZP_Math_2
 ZP_Math_3
 ZP_Math_4
+ZP_Pointer_LSB
+ZP_Pointer_MSB
+
+
+
+
+
+
+ZP_Interupt_Stat					; b7= timer b6= Serial     b0=Newkey
+ZP_Key_Buffer_Pointer
+ZP_Key_Buffer_Read_Pointer
+ZP_Bios_Error						;b7=keyboard buffer overflow
 ZP_INT_BSR_MIRROR
 ZP_INT_TIE_MIRROR
 ZP_INT_SCRATCH_1
-ZP_Pointer_LSB
-ZP_Pointer_MSB
-ZP_Interupt_Stat					; b7= timer
 ZP_INT_PANIC_1						; Not reserved per say, but will be destroyed if B_Panic is called. 
-
-
-
-
-
-
 
 ;************************************
 ;*				Main  				*
@@ -65,7 +68,184 @@ ZP_INT_PANIC_1						; Not reserved per say, but will be destroyed if B_Panic is 
 
 Entrypoint:	
 	SEI
-	LDA B_INT
+	LDA #$C1		;Clock gen id read
+	LDX #03
+	JSR B_I2C
+	ROR
+	ROR
+	BCC Entrypoint_Warm
+Entrypoint_Cold
+	LDX #$FF
+	TXS				;Init Stack Pointer
+	STX R_GPIO		;Init Gpio to output POSTCODE
+	LDA #b00000100
+	STA R_GPIO_CTRL
+	STA R_BANK_SEL	;Conviniently dont have to load a different value
+	INC R_GPIO		;DEBUG 01
+Entrypoint_Cold_Serial_Setup	;sets serial to 9600 8 E 1
+	LDA #b00001011	;DIV_LATCH enable, No tx break, no force parity, Even parity, Yes Parity, 1 stop bit, 8 bit word
+	STA R_COMM_LINE_CTRL
+	LDA #14
+	JSR B_COMM_Set_Speed
+	INC R_GPIO		;DEBUG 02
+	LDA #b00000111
+	STA R_COMM_FIFO_CTRL
+	LDA #b00100010
+	STA R_COMM_MODM_CTRL
+	INC R_GPIO		;DEBUG 03
+	LDX #$00
+	LDY #$00
+	LDA #$5A
+Entrypoint_MEMTEST_ZP: ;tests zp with patterns $5A $A5 $FF $00, also indirectly clears memory by filling  w/ $00 last
+@Loop_STA
+	STA $00, X
+	INX
+	BNE @Loop_STA	;done storing set value
+@Loop_CMP
+	CMP $00, X
+	BNE @Error
+	INX
+	BNE @Loop_CMP
+	INY
+	CMP #$04		
+	BEQ Entrypoint_MEMTEST_ZP_Done
+	LDA Entrypoint_MEMTEST_Values, Y
+	BRA Entrypoint_MEMTEST_ZP
+@Error
+			;will write later
+
+Entrypoint_MEMTEST_ZP_Done:		;Prints RamCount and ZP_ok prompt
+	INC R_GPIO		;Debug 04
+	LDA <Entrypoint_Memtest_Splash
+	STA ZP_Pointer_LSB
+	LDA >Entrypoint_Memtest_Splash
+	STA ZP_Pointer_MSB
+	JSR B_COMM_TX_Str
+	LDA #$00
+	JSR	Entrypoint_MEMTEST_Print_Page
+	LDX #01
+	LDY #03
+	JSR B_COMM_MoveCsr
+	LDA <Entrypoint_MEMTEST_Prompt_zp
+	STA ZP_Pointer_LSB
+	LDA >Entrypoint_MEMTEST_Prompt_zp
+	STA ZP_Pointer_MSB
+	JSR B_COMM_TX_Str
+	INC R_GPIO		;Debug 05
+	LDA #b00000100				;Set ram bank to 1 for ram test
+	STA ZP_INT_BSR_MIRROR
+	STA R_BANK_SEL
+	LDA $01
+	STA ZP_Pointer_MSB
+	STZ ZP_Pointer_LSB
+	LDA $5A
+	LDY #$00
+	LDX #$00
+Entrypoint_MEMTEST:
+@Loop_STA 
+	STA (ZP_Pointer_LSB)		
+	INC (ZP_Pointer_LSB)
+	BNE @Loop_STA
+@Loop_CMP
+	CMP $(ZP_Pointer_LSB)
+	BNE @Error
+	INC (ZP_Pointer_LSB)
+	BNE @Loop_CMP
+	INY
+	CPY #$04
+	BEQ Entrypoint_MEMTEST_Next_Page
+@Return
+	LDA Entrypoint_MEMTEST_Values, Y
+	BRA Entrypoint_MEMTEST
+	
+	
+@Entrypoint_MEMTEST_Next_Page:	;Add offset to RamCount if necisary
+	LDA ZP_Pointer_MSB
+	BBR3 ZP_INT_BSR_MIRROR, @No_Add
+	CLC
+	BBS2 ZP_INT_BSR_MIRROR, @Add_$40
+	ADC #$20
+	.byte $2C
+@ADD_$40
+	ADC #$40
+@No_Add
+	JSR Entrypoint_MEMTEST_Print_Page
+	INC ZP_Pointer_MSB	;check if 
+	LDA #$40
+	CMP ZP_Pointer_MSB
+	BNE @No_Bankswitch
+	STA ZP_Pointer_MSB
+	LDA ZP_INT_BSR_MIRROR
+	CLC 
+	ADC #b00000100
+	CMP #b00010000
+	BEQ @Done
+	STA ZP_INT_BSR_MIRROR
+@No_Bankswitch
+	LDY #$00
+	BRA @Return
+
+@Error	
+	LDA #$F0
+	STA R_GPIO
+	STP
+	
+	
+@Done
+	LDA <Entrypoint_MEMTEST_Prompt_ram
+	STA ZP_Pointer_LSB
+	LDA >Entrypoint_MEMTEST_Prompt_ram
+	STA ZP_Pointer_MSB
+	LDX #01
+	LDY #04
+	JSR B_COMM_MoveCsr
+	JSR B_COMM_TX_Str
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Entrypoint_MEMTEST_Print_Page:
+	PHA
+	LDX #1
+	LDY #2
+	JSR B_COMM_MoveCsr
+	LDA #$24		;$
+	JSR B_COMM_TX_Char
+	PLA
+	JSR B_Data_Hex2ASC
+	JSR B_COMM_TX_Char
+	TXA
+	JSR B_COMM_TX_Char
+	LDA #$30
+	JSR B_COMM_TX_Char
+	RTS
+	
+	
+Entrypoint_MEMTEST_Values:
+.byte $5A, $A5, $FF, $00
+Entrypoint_Memtest_Splash:
+.asciiz "VMC RomBIOS 1.0\T2024 Jake Donovan"
+Entrypoint_MEMTEST_Prompt_zp:
+.asciiz	"ZP OK!"
+Entrypoint_MEMTEST_Prompt_ram:
+.asciiz "Ram OK!"
+
+	
+	
 
 
 ; write control word to prevent out from going low
@@ -90,17 +270,35 @@ Entrypoint:
 ; ======Keyboard=======
 ; readkey
 ;		read currently pressed key, not irq
+B_ReadKey:
+	PHX
+	LDX ZP_Key_Buffer_Read_Pointer
+	CPX ZP_Key_Buffer_Pointer
+	CLC 
+	BNE @OK
+	PLX
+	SEC
+	RTS
+@OK
+	LDA $0200, X
+	INC ZP_Key_Buffer_Read_Pointer
+	RTS
+	
+	
+	
 ;
 ; ======timer=====
 ; Timer setup
 ;	 	enable, and start timer of certain length
 B_TIME_Delay ; start delay with LSB of A and MSB of X cycles. returns 5 cycles into the count due to the RTS instruction. 
-			;34 cycles 17 us @2mhz  (+ 10 cycles to set up 5us @2mhz for a total of 24.5us)
+			;39 cycles  19.5us @2mhz  (+ 10 cycles to set up 5us @2mhz for a total of 24.5us)
 	PHA   					;3
 	LDA #b00110000			;2
 	STA R_TIME_CTRL			;4
-	LDA #b00000001			;2
-	TSB	ZP_INT_TIE_MIRROR	;5
+	LDA	ZP_INT_TIE_MIRROR	;3
+	ORA #b00000001			;2
+	STA ZP_INT_TIE_MIRROR	;3
+	STA R_TIE				;4
 	PLA						;4
 	STA R_TIME_0			;4
 	STX R_TIME_0			;4
@@ -149,22 +347,15 @@ B_COMM_RX_Str: ;Recives String From ZP_Pointer with Offset of A. terminates on N
 	RTS
 	
 
-	
-	
-@End:
 
 B_COMM_TX_Char: ;sends Character in A register. Clobbers Carry: Carry Set when succsessful, Cleared when failed
 	;check serial status 
 	
 	BIT R_COMM_LINE_STAT
-	BVS OK ;full
-	CLC
-	RTS
-@OK:
+	BVC B_COMM_TX_Char ;full
 	STA R_COMM_TXRX
-	SEC
 	RTS
-	
+
 ; tx n char
 ;		send n char from location specified in command or in table
 
@@ -185,6 +376,25 @@ B_COMM_TX_Str ; terminates on 0
 	PLY
 	RTS
 	
+	
+	
+B_COMM_MoveCsr:		;Move cursor to X,Y
+	PHA
+	LDA #27			;ESC
+	JSR B_COMM_TX_Char
+	LDA #$5b		;[
+	JSR B_COMM_TX_Char
+	TXA
+	JSR B_COMM_TX_Char
+	LDA #$3b		;;
+	JSR B_COMM_TX_Char
+	TYA
+	JSR B_COMM_TX_Char
+	LDA #$48		;H
+	JSR B_COMM_TX_Char
+	RTS
+	
+	
 B_COMM_Set_Speed: 	;Sets speed based on value A in table. if Carry Clear and A=/=FF, value larger than table
 	PHX				;If Carry Clear and A=FF, Speed not possible. If Carry Set, sucsessful
 	TAX
@@ -197,6 +407,7 @@ B_COMM_Set_Speed: 	;Sets speed based on value A in table. if Carry Clear and A=/
 	BNE @OK
 	CLC
 @BAD:
+	PLX
 	RTS
 @OK:
 	LDA #b10000000
@@ -223,7 +434,7 @@ COMM_Speed_Hi 	.byte	$08, $06, $04, $03, $03, $01, $00, $00, $00, $00, $00, $00,
 ;			SCL=PB6 SDA=PB7
 ;			Access DDRB, Write b00000000. Access read, Write b00000100
 ;			Send 0 when Output, send 1 when input (opposite to DDR)
-I2C_Init:
+B_I2C:
 	STA ZP_INT_SCRATCH_1
 	ROR 
 	CLC
@@ -249,6 +460,7 @@ I2C_Main:
 	JSR I2C_Read_Ack
 	JSR I2C_Stop
 	RTS
+	
 @Read:	
 	ROL ZP_INT_SCRATCH_1						; Might move to before branch, depends on timing
 	LDA ZP_INT_SCRATCH_1
@@ -261,6 +473,9 @@ I2C_Main:
 	JSR I2C_Write_Ack
 	PLA
 	JSR I2C_Stop
+	RTS
+	
+	
 	
 
 
@@ -274,6 +489,7 @@ I2C_Start:
 	STA R_PIA_I2C
 	PLA
 	RTS
+
 
 I2C_Ack_Nack_Write: ;LDA #$00 for Ack, LDA #$01 for Nack
 	LDX #$01
@@ -345,7 +561,8 @@ I2C_Read:
 	STZ R_PIA_I2C_CTRL		;Access DDR @ R_PIA_I2C
 	PHA
 	LDA #b01000000
-	STA R_PIA_I2C			
+	STA R_PIA_I2C	
+	PLA	
 	DEX
 	BNE Loop
 	RTS
@@ -539,6 +756,34 @@ B_Sub_16:		;Math_1-2 - Math_3-4. Stored In Math_1-2. carry is valid Little Endia
 ; lzs decode
 ;  copy
 ; ROM UPDATE
+B_Data_Hex2ASC: ;A in, A hi nybble X lo Nybble
+	CLD
+	PHY
+	TAY
+	AND #b00001111
+	CMP #$0A
+	BCC @Nums
+	CLC
+	ADC #$37
+.byte $2C
+@Nums
+	ADC #$30
+	TAX
+	TYA
+	AND #b11110000
+	ROR
+	ROR
+	ROR
+	ROR
+	CMP #$0A
+	BCC @Nums
+	CLC
+	ADC #$37
+.byte $2C
+@Nums
+	ADC #$30
+	PLY
+	RTS
 ;
 ; =======system info=======
 B_VER:		;returns computer version and bios version in A register, $FF reserved
@@ -553,67 +798,6 @@ B_VER:		;returns computer version and bios version in A register, $FF reserved
 
 ;future routine when something crashes or goes wrong
 ;will provide register, stack, zp and internal values. will also include entry reason
-Panic:
-	STA R_COMM_SPAR
-Panic_Get_P_No_PHP: ;44 bytes
-	BMI @N		;If no branch, /N
-		BVS @/NV		;If no branch /N/V
-			BEQ @/N/VZ		
-				LDA #b00000000 ; /N/V/Z
-				BRA @Done
-				@/N/VZ:
-				LDA #b00000010
-				BRA @Done
-		@/NV
-			BEQ @/NVZ		
-				LDA #b01000000 ; /N/V/Z
-				BRA @Done
-				@/NVZ:
-				LDA #b01000010
-				BRA @Done
-	@N
-			BEQ @N/VZ		
-				LDA #b10000000 ; /N/V/Z
-				BRA @Done
-				@N/VZ:
-				LDA #b10000010
-				BRA @Done
-		@/NV
-			BEQ @NVZ		
-				LDA #b11000000 ; /N/V/Z
-				BRA @Done
-				@/NVZ:
-				LDA #b11000010
-				BRA @Done
-@Done
-	STA ZP_INT_PANIC_1
-	LDA #$50					;Send PANIC prompt
-	STA R_COMM_TXRX
-	LDA #$41
-	STA R_COMM_TXRX
-	LDA #$4E
-	STA R_COMM_TXRX
-	LDA #$49
-	STA R_COMM_TXRX
-	LDA #$43
-	STA R_COMM_TXRX
-	LDA #$0D
-	STA R_COMM_TXRX
-	LDA #$0A
-	STA R_COMM_TXRX
-	LDA R_COMM_SPAR
-	STX R_COMM_SPAR
-	TAX 
-	
-	
-
-	
-@Send: ;NVZ
-	BIT R_COMM_LINE_STAT
-	BVC @Send
-	STA R_COMM_TXRX
-
-@done
 
 
 ;routine that clobbers mem
@@ -654,22 +838,17 @@ Panic_Get_Registers
 	TSB $0204	;P
 	CLD
 Panic_Send_Prompt:
-	LDA <@JumpA
-	STA $0205
-	LDA >@JumpA
-	STA $0206
 	LDX #$00
 	LDA Panic_Prompts, X
-	BEQ @Done
-@JumpA
-
+	BEQ @Done	
+@Wait
+	BIT R_COMM_LINE_STAT
+	BVC @Wait
+	STA R_COMM_TXRX
+	RTS
 	INX
 @Done:
 	LDX #$FF
-	LDA <@JumpB
-	STA $0205
-	LDA >@JumpB
-	STA $0206
 @JumpB:	INX
 	CPX #$05
 	BEQ Panic_Mem_Copy
@@ -677,26 +856,43 @@ Panic_Send_Prompt:
 	JMP Print_ASCII
 	
 Panic_Mem_Copy:
-	LDA <@JumpC
-	STA $0205
-	LDA >@JumpC
-	STA $0206
 	LDX #$00
+@Loop
+	LDA Panic_Prompts_ZP , X
+	BEQ @Done
+@Wait
+	BIT R_COMM_LINE_STAT
+	BVC @Wait
+	STA R_COMM_TXRX
+	INX
+	BRA @Loop
 	STZ $0200
 	STZ $0201
-@Loop	
+@Loop2	
 	LDA ($0200)
-	JMP Panic_Print_ASCII
+		PLY  ; Maintain stack
+	STY $0205
+	PLY
+	STY $0206
+	JSR Panic_Print_ASCII
+	LDY $0206
+	PHY
+	LDY $0205
+	PHY
 @JumpC	INC $0200
 	BNE @Inc_skip
 	INC $0201
 	LDA #$02
 	CMP $0201
-	BEQ Done
+	
+@Wait
+	BIT R_COMM_LINE_STAT
+	BVC @Wait2
+	STA R_COMM_TXRX
 @Inc_skip	
 	INX
 	CMP #$10
-	BNE @CR_Skip
+	BNE @Loop
 	LDA #$0d
 @Wait5
 	BIT R_COMM_LINE_STAT
@@ -708,20 +904,15 @@ Panic_Mem_Copy:
 	BVC @Wait6
 	STA R_COMM_TXRX
 	LDX #$00
-	BRA @Loop
+	BRA @Loop2
 	
 	
 	
 	
-Done:	
+
 	
+
 	
-	
-Panic_Send	
-	BIT R_COMM_LINE_STAT
-	BVC @Wait
-	STA R_COMM_TXRX
-	JMP ($0200)
 	
 	
 	
@@ -774,11 +965,28 @@ Panic_Print_ASCII:
 	
 Panic_Prompts:
 .asciiz "PANIC!\r\nA  X  Y  SP P\r\n"
-
+Panic_Prompts_ZP:
+.asciiz "ZP\r\n\n"
+Panic_Prompts_Stack:
+.asciiz "\r\n
 	
 ;************************************
 ;*				IRQ 				*
 ;************************************
+
+IRQ_Disable
+
+
+
+
+
+
+
+
+
+
+
+
 
 ;priority
 ;1. timing
@@ -786,6 +994,12 @@ Panic_Prompts:
 ;3. i2c/gpio
 ;4. joy
 ;5. external
+
+
+
+
+
+
 
 .scope
 IRQ_Entrypoint:
@@ -801,13 +1015,13 @@ IRQ_Timer ; done in line for speed reasons. 49 cycles 24.5 us response
 	LDA #b11111110
 	AND ZP_INT_TIE_MIRROR
 	STA ZP_INT_TIE_MIRROR
+	STA R_TIE
 	LDA #$80
 	STA	ZP_Interupt_Stat
 	PLA
 	RTI
 NotTimer: ; Check timer
 	PHX
-	PHY
 	LDA R_COMM_IRQ_STAT
 	LSR
 	BCC IRQ_COMM
@@ -823,7 +1037,6 @@ NotPIA:
 	LDA #$
 	JSR B_Panic
 IRQ_Done:
-	PLY
 	PLX
 	PLA
 	RTI
@@ -835,10 +1048,41 @@ IRQ_Done:
 
 ;7 3 2 2 2 4 4 2 2 3 3 2 3 4 6
 
+IRQ_COMM:
+	TRB #b11111100
+	BEQ IRQ_COMM_MODM_STAT
+	;fall thru
+IRQ_COMM_LINE_STAT:
+	LDA R_COMM_LINE_STAT
+	
+
+
+IRQ_COMM_MODM_STAT:	
 
 
 
 
 
 
+
+
+IRQ_GPIO_A:
+
+IRQ_GPIO_B
+
+IRQ_Key:
+	LDA #b00000001
+	TSB ZP_Interupt_Stat
+	LDX ZP_Key_Buffer_Pointer
+	CPX ZP_Key_Buffer_Read_Pointer
+	BNE @Not_Overflow
+	LDA #b10000000
+	TSB ZP_Bios_Error
+@Not_Overflow
+	INX
+	STX ZP_Key_Buffer_Pointer
+	LDA R_KEYB
+	STA $0200, X
+	BRA IRQ_Done
+	
 

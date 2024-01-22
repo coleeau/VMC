@@ -8,7 +8,7 @@ R_CRTC_REG_SEL 	:= $6000
 R_CRTC_REG		:= $6001
 
 ; register 01 Ascii Keyboard
-R_KEYB_REG		:= $6010
+R_KEYB			:= $6010
 
 
 ; register 02 Timer Enable Register
