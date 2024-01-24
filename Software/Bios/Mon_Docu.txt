@@ -1,0 +1,24 @@
+codes bios
+
+A(ssemble): Run Assembler
+B(ank): Change banking info
+E(nd):Return to bios enrtypoint
+
+D(isassembler): disassembler
+
+
+L(ist): list ram
+		
+R(egister): register
+	Sub commands
+	RA: 
+	RX:
+	RY:
+	RSP:
+	RP:
+	
+J(ump): run (Jump)
+
+
+P: program eeprom
+W(rite): write ram
