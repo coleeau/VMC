@@ -56,7 +56,7 @@ ZP_Pointer_MSB
 ZP_Interupt_Stat					; b7= timer b6= Serial     b0=Newkey
 ZP_Key_Buffer_Pointer
 ZP_Key_Buffer_Read_Pointer
-ZP_Bios_Error						;b7=keyboard buffer overflow
+ZP_Bios_Error						;b7=keyboard buffer overflow		b0=timer source 0=cpuclk 1=clk2
 ZP_INT_BSR_MIRROR
 ZP_INT_TIE_MIRROR
 ZP_INT_SCRATCH_1
@@ -65,7 +65,6 @@ ZP_INT_PANIC_1						; Not reserved per say, but will be destroyed if B_Panic is 
 ;************************************
 ;*				Main  				*
 ;************************************
-
 Entrypoint:	
 	SEI
 	LDA #$C1		;Clock gen id read
@@ -188,10 +187,28 @@ Entrypoint_MEMTEST:
 @Error	
 	LDA #$F0
 	STA R_GPIO
+	LDX ZP_Pointer_LSB
+	LDY ZP_Pointer_LSB
+	LDA <Entrypoint_MEMTEST_Prompt_Badram
+	STA ZP_Pointer_LSB
+	LDA >Entrypoint_MEMTEST_Prompt_Badram
+	STA ZP_Pointer_MSB
+	JSR B_COMM_TX_Str
+	TXA
+	JSR B_Data_Hex2ASC
+	JSR B_COMM_TX_Char
+	TXA 
+	JSR B_COMM_TX_Char	
+	TYA
+	JSR B_Data_Hex2ASC
+	JSR B_COMM_TX_Char
+	TXA 
+	JSR B_COMM_TX_Char
 	STP
 	
 	
 @Done
+	INC R_GPIO		;Debug 06
 	LDA <Entrypoint_MEMTEST_Prompt_ram
 	STA ZP_Pointer_LSB
 	LDA >Entrypoint_MEMTEST_Prompt_ram
@@ -201,7 +218,63 @@ Entrypoint_MEMTEST:
 	JSR B_COMM_MoveCsr
 	JSR B_COMM_TX_Str
 	
-
+Entrypoint_Test_CLK:
+	
+@Enable_Clk2
+	INC R_GPIO		;Debug 07
+	LDA #$C0		;Clock gen id write
+	LDX #03
+	LDY #$02 		;Make sure CLK2 is disabled before checking which clock is used by timer
+	JSR B_I2C
+	LDA #$FF
+	TAX
+	JSR B_TIME_Delay
+	LDA #b11100010	;Readback Status For Counter 0
+	STA R_TIME_CTRL
+	BIT R_TIME_0
+	BVC @Using_CPU_CLK
+	LDA #b00000001
+	TSB ZP_Bios_Error	;using CLK2
+@Using_CPU_CLK	
+	LDA #b00110000			;Disable counting
+	STA R_TIME_CTRL
+	INC R_GPIO		;Debug 08	
+	LDA #$C0		;Start CLK2
+	LDX #03
+	LDY #$00
+	JSR B_I2C
+@Check_Bad_Timer	;if both reads return Null Count, Timer Bad
+	LDA #$ff
+	TAX
+	JSR B_TIME_Delay
+	LDA #b11100010	;Readback Status For Counter 0
+	STA R_TIME_CTRL
+	BIT R_TIME_0
+	BVC @Timer_Ok
+	LDA <Entrypoint_Prompt_BadTimer
+	STA ZP_Pointer_LSB
+	LDA >Entrypoint_Prompt_BadTimer
+	STA ZP_Pointer_MSB
+	JSR B_COMM_TX_Str
+	STP
+@Timer_Ok	
+	LDA #b00110000
+	STA R_TIME_CTRL
+	INC R_GPIO		;Debug 09
+	LDA <Entrypoint_Prompt_Timer_OK
+	STA ZP_Pointer_LSB
+	LDA >Entrypoint_Prompt_Timer_OK
+	STA ZP_Pointer_MSB
+	JSR B_COMM_TX_Str
+	
+Entrypoint_Done:
+	JSR B_COMM_ClsScr
+	LDA <Entrypoint_Prompt_Done
+	STA ZP_Pointer_LSB
+	LDA >Entrypoint_Prompt_Done
+	STA ZP_Pointer_MSB
+	JSR B_COMM_TX_Str
+	JMP MON
 
 
 
@@ -238,14 +311,19 @@ Entrypoint_MEMTEST_Print_Page:
 Entrypoint_MEMTEST_Values:
 .byte $5A, $A5, $FF, $00
 Entrypoint_Memtest_Splash:
-.asciiz "VMC RomBIOS 1.0\T2024 Jake Donovan"
+.asciiz "VMC RomBIOS 1.0\T2024 Jake Donovan\TTurn on local echo!"
 Entrypoint_MEMTEST_Prompt_zp:
 .asciiz	"ZP OK!"
 Entrypoint_MEMTEST_Prompt_ram:
 .asciiz "Ram OK!"
-
-	
-	
+Entrypoint_MEMTEST_Prompt_Badram:
+.asciiz "Bad Ram @$"
+Entrypoint_Prompt_BadTimer:
+.asciiz "Bad TIMER"
+Entrypoint_Prompt_Timer_OK:
+.asciiz "TIMER OK!"
+Entrypoint_Prompt_Done:
+.asciiz "System Ready"
 
 
 ; write control word to prevent out from going low
@@ -394,6 +472,17 @@ B_COMM_MoveCsr:		;Move cursor to X,Y
 	JSR B_COMM_TX_Char
 	RTS
 	
+B_COMM_ClsScr		;VT100 Clear Screen
+	PHA
+	LDA <@String
+	STA ZP_Pointer_LSB
+	LDA >@String
+	STA ZP_Pointer_MSB
+	JSR B_COMM_TX_Str
+	PLA
+	RTS
+@String
+.asciiz "^[[2J"
 	
 B_COMM_Set_Speed: 	;Sets speed based on value A in table. if Carry Clear and A=/=FF, value larger than table
 	PHX				;If Carry Clear and A=FF, Speed not possible. If Carry Set, sucsessful
