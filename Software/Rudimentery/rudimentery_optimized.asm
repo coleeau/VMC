@@ -181,7 +181,7 @@ bne Invalid
 OK:					; Final Jump to loaded Program
 ldy StrOK-Str ; (ok)
 jsr Send_MSG
-jmp ($0080)
+jmp (Z_StartLSB)
 Invalid:
 ldy StrCHKSM-Str ;(Checksum)
 jsr Send_MSG
