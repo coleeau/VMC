@@ -44,7 +44,6 @@ Z_CalcChecksumMSB	:= $F7 ;Local, MSB of Above ^
 
 
 .segment "CODE"
-
 Entrypoint:				; General housekeeping, setting banks correctly
 sei
 	.ifpc02				; cld on cmos initialized on reset 
