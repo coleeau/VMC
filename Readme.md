@@ -26,15 +26,16 @@ and as a way to learn more concepts in electrical engineering, computer engineer
 
 - Design of Revision 1 Arcitecture
 - Revision 1 PCB Layout
-
+- Bootstrap Program "Rudimentery"
+- Assemble and
 ### In Progress
 
-- Bootstrap Program "Rudimentery"
+- Test Revision 1 Hardware
+- Write Bios
 
 ### Planned
 
-- Assemble and test Revision 1 Hardware
-- Write/Port Bios
+
 - Port Basic
 - Replace glue logic with PLD for better speed and cost efficiancy
 
