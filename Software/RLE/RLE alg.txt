@@ -52,16 +52,16 @@ AAAAAAAA xxxxxxxx | RLE (where A is byte encoded and x is length)
 
 
 For 1.0
-
+0000xxxx | end of file
 0001BBBB | Change mode where b is mode
 
 0XXXxxxx | reserved
 1000xxxx | reserved
-1001xxxx | global Checksum define
+1001xxxx | global Checksum define (word little edian)
 101Xxxxx | reserved
 1100xxxx | reserved
-1101xxxx | define Vertical dimmension of current data in database
-1110xxxx | define Horizontal dimmension of current data
+1101xxxx | Reserved
+1110xxxx | Reserved
 1111xxxx | Version file was encoded in (Magic Byte)
 
 
@@ -69,19 +69,24 @@ For 1.0
 
 mode 1 (0000)
 Axxxxxxx | RLE  (where A = bit encoded, and x is length)
-X0000000 | Enter Command Mode (X is dont care)
+00000000 | Enter Command Mode (X is dont care)
 
 
 Mode 2 (0001)
 AAxxxxxx | RLE (where A is pair encoded and x is length)
-XX000000 | Enter command mode
+00000000 | Enter command mode
 
 
 mode 4 (0010)
 AAAAxxxx | RLE (where A is nible encoded and x is length)
-XXXX0000 | Enter Command mode
+00000000 | Enter Command mode
 
 
 mode 8 (0011)
 AAAAAAAA xxxxxxxx | RLE (where A is byte encoded and x is length)
 00000000 00000000 | Enter Command mode
+
+
+Expected header
+
+"JDRLE" First, then in any order:Global CSUM, Version of File

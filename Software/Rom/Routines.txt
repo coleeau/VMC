@@ -1,0 +1,70 @@
+
+
+
+READKEY:
+	Returns oldest unread key in keybuffer
+		Result in A, C is set when fail
+		
+
+
+
+TIME_DELAY:
+	Start timer of length n+34 cycles
+			n is unsigned word with A=LSB and X=MSB
+
+
+
+
+
+I2C:
+	Read/Write i2c
+		A=ID+R/W (aaaaaaab where a=ID and b=R/W)	X=Register	Y=Value
+		When Read, Read byte returned in A
+
+
+
+
+COMM_RX_Char:
+	Recive Character in A, Carry set when succsesful
+	
+COMM_RX_Str:
+	Receive string to ZP_Pointer, A
+	Length returned in A
+	
+COMM_TX_Char:
+	Sends Character in A
+
+COMM_TX_Str:
+	Loads and sends String From ZP_Pointer, A
+	
+COMM_MoveCsr:
+	VT100
+	Move cursor to X,Y (values in respective registers)
+
+COMM_ClsScr:
+	VT100
+	Clear screen
+	no effects on registers (no idea abt flags)
+	
+COMM_Set_Speed: sets speed based on pointer on table (acumulator)
+	;Kb/s 	.05, .075, .11, .1345, .15, .3, .6, 1.2, 2.0, 2.4, 2.8, 3.6, 4.8, 7.2, 9.6, 19.2, 38.4, 56 
+	if Carry Clear and A=/=FF, value larger than table
+	If Carry Clear and A=FF, Selected Speed not possible
+	If Carry Set, sucsessful
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+DATA_Copy:
+	Copies Data From ZP_Pointer1 to ZP_Pointer2 with a length of XY
