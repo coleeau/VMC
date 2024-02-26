@@ -1,0 +1,42 @@
+Namco n163 audio reverse engineering
+address is in 800 byte chunks nativly, 5 bit adressing (but kinda wierd), registers will fit into 2 io slot
+
+00000
+00001
+00010
+00011
+00100
+00101
+00110
+00111
+01000
+01001		Data Port
+01010		Irq count low
+01011		Irq count High/e
+01100
+01101
+01110
+01111
+10000		CHbank stuff begin
+10001
+10010
+10011
+10100
+10101
+10110
+10111
+11000
+11001
+11010
+11011		CHbank end
+11100		Sound Enable/ prg bank
+11101		prg sel 2/chram
+11110		prg3
+11111		Address Port / wp
+
+
+
+01001
+11100
+11111
+ynyyy

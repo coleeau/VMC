@@ -1,3 +1,7 @@
+;************************************
+;*			Bios Calls				*
+;************************************
+.SEGMENT "B_CALL"
 B_ReadKey:				JMP	BI_ReadKey				;$FF00
 B_TIME_Delay:			JMP BI_TIME_Delay			;$FF03
 B_TIME_Pulse:			JMP B_Panic					;$FF06
@@ -30,7 +34,7 @@ B_MATH16_Sub:			JMP BI_MATH16_Sub			;$FF54
 B_MATH16_Multi:			JMP BI_MATH16_Multi			;$FF57
 B_MATH16_Div:			JMP BI_MATH16_Div			;$FF5A
 B_DATA_RLE_Encode:		JMP BI_DATA_RLE_Encode		;$FF5D
-B_DATA_RLE_Decode:		JMP BI_DATA_RLE_Decode		;$FF60
+B_DATA_RLE_Decode:		JMP BI_RLE					;$FF60
 B_DATA_LZS_Encode:		JMP BI_DATA_LZS_Encode		;$FF63
 B_DATA_LZS_Decode:		JMP BI_DATA_LZS_Decode		;$FF66
 B_DATA_Copy:			JMP BI_DATA_Copy			;$FF69
