@@ -219,7 +219,7 @@ BI_RLE_Mode1_Entry:
 
 BI_RLE_Mode1:
 	LDA (ZP_Pointer1_LSB)			;for new command
-	BEQ BI_RLE_Mode1_GoCommand 		;check if command mode
+	BEQ BI_RLE_Mode1_GoCommand 		;check if command mod
 	CMP #$80
 	BEQ BI_RLE_Mode1_GoCommand
 	PHA								; set up bit length counter
@@ -290,6 +290,27 @@ BI_RLE_Mode1_NewCommand:
 BI_RLE_Mode1_GoCommand:
 
 BI_RLE_Mode2_Entry:
+
+
+
+
 BI_RLE_Mode4_Entry:
+;ZP_SCRATCH_3 bit 7 used for upper or lower nyble
+	SMB7 ZP_INT_SCRATCH_3
+	LDA (ZP_Pointer1_LSB)		;for new command
+	PHA
+	AND #%00001111
+	BEQ BI_RLE_Mode4_GoCommand 		;check if command mod
+	TAX
+	PLA
+	AND #%11110000
+	PHA
+	
+
+
+
+
+BI_RLE_Mode4_GoCommand 
+PLA
 BI_RLE_Mode8_Entry:
 	STP
