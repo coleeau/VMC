@@ -346,7 +346,9 @@ BI_ReadKey:
 	RTS
 	
 	
-	
+
+
+
 ;
 ; ======timer=====
 ; Timer setup
@@ -373,27 +375,40 @@ BI_TIME_Delay: ; start delay with LSB of A and MSB of X cycles. returns 5 cycles
 ;
 ;
 ; ======Serial=======
-BI_COMM_RX_Char: ;Receives Character in A register. Clobbers Carry: Carry Set when succsessful, CLeared when failed
+BI_COMM_RX_Char: ;Receives Character in A register. Clobbers Carry: Carry Set when succsessful, CLeared when failed. Remote Echo
 	LDA R_COMM_LINE_STAT
 	ROR
 	BCS @OK
 	RTS
 @OK:	
 	LDA R_COMM_TXRX
+	JSR BI_COMM_TX_Char
 	RTS
 
 
-BI_COMM_RX_Str: ;Recives String From ZP_Pointer with Offset of A. terminates on Nul or CR. returns with length in A register
-@Loop:
+BI_COMM_RX_Str: ;Recives String to ZP_Pointer or ZP_Key_Buffer_Pointer based on ZP_Bios_Flags.7. terminates on Nul or CR. returns with length in A register. Remote Echo
+;Add check for buffer overflow
 	PHY
 	PHX
 	LDX #$00
-	TAY
+	BBR7 ZP_Bios_Flags, @Not_0200a
+	LDY ZP_Key_Buffer_Pointer
+	CPY ZP_Key_Buffer_Read
+.byte $2c
+@Not_0200a:
+	LDY #$00
+@Loop:	
 	LDA R_COMM_LINE_STAT
 	ROR
 	BCC @Loop
 	LDA R_COMM_TXRX
+	BBS7 ZP_Bios_Flags, @Not_0200b
+	STA $0200, Y
+	BRA @Skip
+@Not_0200b
 	STA (ZP_Pointer1_LSB), Y
+@Skip
+	JSR BI_COMM_TX_Char
 	BEQ @Done
 	CMP #$0d
 	BEQ @Done
@@ -401,6 +416,9 @@ BI_COMM_RX_Str: ;Recives String From ZP_Pointer with Offset of A. terminates on 
 	INX
 	BRA @Loop
 @Done:
+	BBS7 ZP_Bios_Flags, @Not_0200c
+	STY ZP_Key_Buffer_Pointer
+@Not_0200c:
 	TXA
 	PLX
 	PLY
@@ -433,7 +451,6 @@ BI_COMM_TX_Str: ; terminates on 0
 @End:
 	PLY
 	RTS
-	
 	
 	
 BI_COMM_MoveCsr:		;Move cursor to X,Y

@@ -26,9 +26,12 @@ I2C:
 
 COMM_RX_Char:
 	Recive Character in A, Carry set when succsesful
+	Remote Echo
 	
 COMM_RX_Str:
-	Receive string to ZP_Pointer, A
+	Recives String From ZP_Pointer or ZP_Key_Buffer_Pointer based on ZP_Bios_Flags.7
+	terminates on Nul or CR
+	Remote Echo
 	Length returned in A
 	
 COMM_TX_Char:

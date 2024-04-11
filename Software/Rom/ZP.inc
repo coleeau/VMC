@@ -9,10 +9,11 @@ ZP_Pointer1_LSB					:=			$E4
 ZP_Pointer1_MSB					:=			$E5
 ZP_Pointer2_LSB					:=			$E6
 ZP_Pointer2_MSB					:=			$E7
-
-
-
-
+ZP_Mon_Bak_A					:=			$E8
+ZP_Mon_Bak_X					:=			$E9
+ZP_Mon_Bak_Y					:=			$EA
+ZP_Mon_Bak_P					:=			$EB
+ZP_Mon_Bak_SP					:=			$EC
 
 
 ZP_Interupt_Stat				:=			$F0		; b7= timer b6= Serial     b0=Newkey
@@ -22,7 +23,7 @@ ZP_Bios_Error					:=			$F3		;b7=keyboard buffer overflow  b6=Data routine Error 
 ZP_INT_BSR_MIRROR				:=			$F4
 ZP_INT_TIE_MIRROR				:=			$F5
 ZP_INT_PANIC_1					:=			$F6		; Not reserved per say, but will be destroyed if B_B_Panic is called. 
-
+ZP_Bios_Flags					:=			$F7		;b7= kb/serial buffer location 0=$0200 1=ZP_Pointer1
 ZP_INT_SCRATCH_1				:=			$F8
 ZP_INT_SCRATCH_2				:=			$F9
 ZP_INT_SCRATCH_3				:=			$FA
